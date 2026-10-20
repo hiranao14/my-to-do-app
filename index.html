@@ -1,0 +1,226 @@
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Todo App</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      background: #f5f6fa;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      text-align: center;
+      margin-top: 0;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    #todoInput {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #addButton {
+      background: #4f46e5;
+      color: white;
+    }
+
+    #addButton:hover {
+      opacity: 0.85;
+    }
+
+    #todoList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #f8f8fb;
+      border-radius: 8px;
+    }
+
+    .todo-text {
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .completed {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .delete-button {
+      background: #ef4444;
+      color: white;
+    }
+
+    .empty-message {
+      text-align: center;
+      color: #999;
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>📝 My Todo</h1>
+
+    <div class="input-area">
+      <input
+        type="text"
+        id="todoInput"
+        placeholder="Todoを入力してください"
+      >
+      <button id="addButton">追加</button>
+    </div>
+
+    <ul id="todoList"></ul>
+  </div>
+
+  <script>
+    // Todoデータ
+    let todos = JSON.parse(localStorage.getItem("todos")) || [];
+
+    const todoInput = document.getElementById("todoInput");
+    const addButton = document.getElementById("addButton");
+    const todoList = document.getElementById("todoList");
+
+    // Todoを保存
+    function saveTodos() {
+      localStorage.setItem("todos", JSON.stringify(todos));
+    }
+
+    // Todoを表示
+    function renderTodos() {
+      todoList.innerHTML = "";
+
+      if (todos.length === 0) {
+        todoList.innerHTML =
+          '<li class="empty-message">Todoはありません</li>';
+        return;
+      }
+
+      todos.forEach((todo) => {
+        const li = document.createElement("li");
+        li.className = "todo-item";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = todo.completed;
+
+        checkbox.addEventListener("change", () => {
+          todo.completed = checkbox.checked;
+          saveTodos();
+          renderTodos();
+        });
+
+        const span = document.createElement("span");
+        span.className = "todo-text";
+
+        if (todo.completed) {
+          span.classList.add("completed");
+        }
+
+        span.textContent = todo.text;
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "削除";
+        deleteButton.className = "delete-button";
+
+        deleteButton.addEventListener("click", () => {
+          todos = todos.filter((item) => item.id !== todo.id);
+          saveTodos();
+          renderTodos();
+        });
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(deleteButton);
+
+        todoList.appendChild(li);
+      });
+    }
+
+    // Todoを追加
+    function addTodo() {
+      const text = todoInput.value.trim();
+
+      if (text === "") {
+        alert("Todoを入力してください");
+        return;
+      }
+
+      const newTodo = {
+        id: Date.now(),
+        text: text,
+        completed: false
+      };
+
+      todos.push(newTodo);
+
+      saveTodos();
+      renderTodos();
+
+      todoInput.value = "";
+      todoInput.focus();
+    }
+
+    // 追加ボタン
+    addButton.addEventListener("click", addTodo);
+
+    // Enterキーでも追加
+    todoInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        addTodo();
+      }
+    });
+
+    // 最初に表示
+    renderTodos();
+  </script>
+
+</body>
+</html>
+```
