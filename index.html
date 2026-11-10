@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -34,16 +33,26 @@
 
     .input-area {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     #todoInput {
       flex: 1;
+      min-width: 180px;
       padding: 12px;
       border: 1px solid #ddd;
       border-radius: 8px;
       font-size: 16px;
+    }
+
+    #categorySelect {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
     }
 
     button {
@@ -61,6 +70,23 @@
 
     #addButton:hover {
       opacity: 0.85;
+    }
+
+    .filter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .filter-tab {
+      background: #e5e7eb;
+      color: #333;
+    }
+
+    .filter-tab.active {
+      background: #4f46e5;
+      color: white;
     }
 
     #todoList {
@@ -89,6 +115,37 @@
       color: #999;
     }
 
+    .category-badge {
+      flex-shrink: 0;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .badge-work {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .badge-private {
+      background: #fce7f3;
+      color: #be185d;
+    }
+
+    .badge-none {
+      background: #e5e7eb;
+      color: #6b7280;
+    }
+
+    .category-select {
+      flex-shrink: 0;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 13px;
+      background: white;
+    }
+
     .delete-button {
       background: #ef4444;
       color: white;
@@ -113,7 +170,18 @@
         id="todoInput"
         placeholder="Todoを入力してください"
       >
+      <select id="categorySelect" aria-label="分類">
+        <option value="private" selected>プライベート用</option>
+        <option value="work">仕事用</option>
+      </select>
       <button id="addButton">追加</button>
+    </div>
+
+    <div class="filter-tabs" role="group" aria-label="分類で絞り込む">
+      <button class="filter-tab active" data-filter="all">すべて</button>
+      <button class="filter-tab" data-filter="work">仕事用</button>
+      <button class="filter-tab" data-filter="private">プライベート用</button>
+      <button class="filter-tab" data-filter="none">未設定</button>
     </div>
 
     <ul id="todoList"></ul>
@@ -123,9 +191,27 @@
     // Todoデータ
     let todos = JSON.parse(localStorage.getItem("todos")) || [];
 
+    // 現在の絞り込み（all / work / private / none）
+    let currentFilter = "all";
+
     const todoInput = document.getElementById("todoInput");
+    const categorySelect = document.getElementById("categorySelect");
     const addButton = document.getElementById("addButton");
     const todoList = document.getElementById("todoList");
+    const filterTabs = document.querySelectorAll(".filter-tab");
+
+    // 分類を取り出す（work / private 以外は未設定として扱う）
+    function categoryOf(todo) {
+      return todo.category === "work" || todo.category === "private"
+        ? todo.category
+        : "";
+    }
+
+    function categoryLabel(category) {
+      if (category === "work") return "仕事用";
+      if (category === "private") return "プライベート用";
+      return "未設定";
+    }
 
     // Todoを保存
     function saveTodos() {
@@ -142,7 +228,19 @@
         return;
       }
 
-      todos.forEach((todo) => {
+      const filteredTodos = todos.filter((todo) => {
+        if (currentFilter === "all") return true;
+        if (currentFilter === "none") return categoryOf(todo) === "";
+        return categoryOf(todo) === currentFilter;
+      });
+
+      if (filteredTodos.length === 0) {
+        todoList.innerHTML =
+          '<li class="empty-message">この分類のTodoはありません</li>';
+        return;
+      }
+
+      filteredTodos.forEach((todo) => {
         const li = document.createElement("li");
         li.className = "todo-item";
 
@@ -165,6 +263,41 @@
 
         span.textContent = todo.text;
 
+        const category = categoryOf(todo);
+
+        const badge = document.createElement("span");
+        badge.className =
+          "category-badge " +
+          (category === "work"
+            ? "badge-work"
+            : category === "private"
+              ? "badge-private"
+              : "badge-none");
+        badge.textContent = categoryLabel(category);
+
+        // 項目ごとに分類を変更できるセレクト
+        const itemCategorySelect = document.createElement("select");
+        itemCategorySelect.className = "category-select";
+        itemCategorySelect.setAttribute("aria-label", "分類を変更");
+
+        [
+          { value: "", label: "未設定" },
+          { value: "work", label: "仕事用" },
+          { value: "private", label: "プライベート用" }
+        ].forEach((optionData) => {
+          const option = document.createElement("option");
+          option.value = optionData.value;
+          option.textContent = optionData.label;
+          itemCategorySelect.appendChild(option);
+        });
+        itemCategorySelect.value = category;
+
+        itemCategorySelect.addEventListener("change", () => {
+          todo.category = itemCategorySelect.value;
+          saveTodos();
+          renderTodos();
+        });
+
         const deleteButton = document.createElement("button");
         deleteButton.textContent = "削除";
         deleteButton.className = "delete-button";
@@ -177,6 +310,8 @@
 
         li.appendChild(checkbox);
         li.appendChild(span);
+        li.appendChild(badge);
+        li.appendChild(itemCategorySelect);
         li.appendChild(deleteButton);
 
         todoList.appendChild(li);
@@ -195,7 +330,8 @@
       const newTodo = {
         id: Date.now(),
         text: text,
-        completed: false
+        completed: false,
+        category: categorySelect.value
       };
 
       todos.push(newTodo);
@@ -206,6 +342,18 @@
       todoInput.value = "";
       todoInput.focus();
     }
+
+    // 分類タブで絞り込む
+    filterTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        currentFilter = tab.dataset.filter;
+
+        filterTabs.forEach((item) => item.classList.remove("active"));
+        tab.classList.add("active");
+
+        renderTodos();
+      });
+    });
 
     // 追加ボタン
     addButton.addEventListener("click", addTodo);
@@ -223,4 +371,3 @@
 
 </body>
 </html>
-```
